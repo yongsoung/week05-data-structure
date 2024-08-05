@@ -5,6 +5,7 @@
 
 typedef enum { RBTREE_RED, RBTREE_BLACK } color_t;
 
+
 typedef int key_t;
 
 typedef struct node_t {
