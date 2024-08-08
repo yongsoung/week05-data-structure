@@ -23,24 +23,24 @@ rbtree *new_rbtree(void)
   return p;
 }
 
-void recursive_delete_rbtree(rbtree *t, node_t *curNode)
-{
-  if (curNode != t->nil)
-  {
-    // 재귀
-    recursive_delete_rbtree(t, curNode->right);
-    recursive_delete_rbtree(t, curNode->left);
-    free(curNode);
-  }
-}
+// void recursive_delete_rbtree(rbtree *t, node_t *curNode)
+// {
+//   if (curNode != t->nil)
+//   {
+//     // 재귀
+//     recursive_delete_rbtree(t, curNode->right);
+//     recursive_delete_rbtree(t, curNode->left);
+//     free(curNode);
+//   }
+// }
 
 void delete_rbtree(rbtree *t)
 {
-  recursive_delete_rbtree(t, t->root);
-  // while (t->root != t->nil)
-  // {
-  //   rbtree_erase(t, t->root);
-  // }
+  // recursive_delete_rbtree(t, t->root);
+  while (t->root != t->nil)
+  {
+    rbtree_erase(t, t->root);
+  }
 
   free(t);
 }
@@ -158,30 +158,46 @@ int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n)
 
   while (curNode != t->nil)
   {
-    if (curNode->left != t->nil)
+    if (curNode->left == t->nil)
     {
-      prevNode = curNode->left;
-
-      while (prevNode->right != t->nil)
+      if (index < n)
       {
-        prevNode = prevNode->right;
+        arr[index++] = curNode->key;
       }
-      prevNode->right = curNode;
-      tempNode = curNode;
-      curNode = curNode->left;
-      tempNode->left = t->nil;
-    }
-    else
-    {
-      arr[index++] = curNode->key;
-      if (index >= n)
+      else
       {
         break;
       }
       curNode = curNode->right;
     }
-  }
+    else
+    {
+      prevNode = curNode->left;
+      while (prevNode->right != t->nil && prevNode->right != curNode)
+      {
+        prevNode = prevNode->right;
+      }
 
+      if (prevNode->right == t->nil)
+      {
+        prevNode->right = curNode;
+        curNode = curNode->left;
+      }
+      else
+      {
+        prevNode->right = t->nil;
+        if (index < n)
+        {
+          arr[index++] = curNode->key;
+        }
+        else
+        {
+          break;
+        }
+        curNode = curNode->right;
+      }
+    }
+  }
   return 0;
 }
 
@@ -301,6 +317,61 @@ void erase_rbtree_fixup(rbtree *t, node_t *deleteFixupNode)
   }
   deleteFixupNode->color = RBTREE_BLACK;
 }
+// 회전, 재조정 함수 선언해주기
+void rbtree_insert_fixup(rbtree *t, node_t *tempFixupNode)
+{
+  // z -> tempFixupNode
+  node_t *tempFixupUncleNode;
+  while (tempFixupNode->parent->color == RBTREE_RED)
+  {
+    if (tempFixupNode->parent == tempFixupNode->parent->parent->left)
+    {
+      tempFixupUncleNode = tempFixupNode->parent->parent->right;
+      if (tempFixupUncleNode->color == RBTREE_RED)
+      {
+        tempFixupNode->parent->color = RBTREE_BLACK;
+        tempFixupUncleNode->color = RBTREE_BLACK;
+        tempFixupNode->parent->parent->color = RBTREE_RED;
+        tempFixupNode = tempFixupNode->parent->parent;
+      }
+      else
+      {
+        if (tempFixupNode == tempFixupNode->parent->right)
+        {
+          tempFixupNode = tempFixupNode->parent;
+          rbtree_LeftRotate(t, tempFixupNode);
+        }
+        tempFixupNode->parent->color = RBTREE_BLACK;
+        tempFixupNode->parent->parent->color = RBTREE_RED;
+        rbtree_RightRotate(t, tempFixupNode->parent->parent);
+      }
+    }
+    else
+    {
+      tempFixupUncleNode = tempFixupNode->parent->parent->left;
+      if (tempFixupUncleNode->color == RBTREE_RED)
+      {
+        tempFixupNode->parent->color = RBTREE_BLACK;
+        tempFixupUncleNode->color = RBTREE_BLACK;
+        tempFixupNode->parent->parent->color = RBTREE_RED;
+        tempFixupNode = tempFixupNode->parent->parent;
+      }
+
+      else
+      {
+        if (tempFixupNode == tempFixupNode->parent->left)
+        {
+          tempFixupNode = tempFixupNode->parent;
+          rbtree_RightRotate(t, tempFixupNode);
+        }
+        tempFixupNode->parent->color = RBTREE_BLACK;
+        tempFixupNode->parent->parent->color = RBTREE_RED;
+        rbtree_LeftRotate(t, tempFixupNode->parent->parent);
+      }
+    }
+  }
+  t->root->color = RBTREE_BLACK;
+}
 
 void rbtree_LeftRotate(rbtree *t, node_t *curLNode)
 {
@@ -370,60 +441,4 @@ void rbtree_transplant(rbtree *t, node_t *originNode, node_t *transNode)
     originNode->parent->right = transNode;
   }
   transNode->parent = originNode->parent;
-}
-
-// 회전, 재조정 함수 선언해주기
-void rbtree_insert_fixup(rbtree *t, node_t *tempFixupNode)
-{
-  // z -> tempFixupNode
-  node_t *tempFixupUncleNode;
-  while (tempFixupNode->parent->color == RBTREE_RED)
-  {
-    if (tempFixupNode->parent == tempFixupNode->parent->parent->left)
-    {
-      tempFixupUncleNode = tempFixupNode->parent->parent->right;
-      if (tempFixupUncleNode->color == RBTREE_RED)
-      {
-        tempFixupNode->parent->color = RBTREE_BLACK;
-        tempFixupUncleNode->color = RBTREE_BLACK;
-        tempFixupNode->parent->parent->color = RBTREE_RED;
-        tempFixupNode = tempFixupNode->parent->parent;
-      }
-      else
-      {
-        if (tempFixupNode == tempFixupNode->parent->right)
-        {
-          tempFixupNode = tempFixupNode->parent;
-          rbtree_LeftRotate(t, tempFixupNode);
-        }
-        tempFixupNode->parent->color = RBTREE_BLACK;
-        tempFixupNode->parent->parent->color = RBTREE_RED;
-        rbtree_RightRotate(t, tempFixupNode->parent->parent);
-      }
-    }
-    else
-    {
-      tempFixupUncleNode = tempFixupNode->parent->parent->left;
-      if (tempFixupUncleNode->color == RBTREE_RED)
-      {
-        tempFixupNode->parent->color = RBTREE_BLACK;
-        tempFixupUncleNode->color = RBTREE_BLACK;
-        tempFixupNode->parent->parent->color = RBTREE_RED;
-        tempFixupNode = tempFixupNode->parent->parent;
-      }
-
-      else
-      {
-        if (tempFixupNode == tempFixupNode->parent->left)
-        {
-          tempFixupNode = tempFixupNode->parent;
-          rbtree_RightRotate(t, tempFixupNode);
-        }
-        tempFixupNode->parent->color = RBTREE_BLACK;
-        tempFixupNode->parent->parent->color = RBTREE_RED;
-        rbtree_LeftRotate(t, tempFixupNode->parent->parent);
-      }
-    }
-  }
-  t->root->color = RBTREE_BLACK;
 }
